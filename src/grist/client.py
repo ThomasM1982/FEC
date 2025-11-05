@@ -249,3 +249,130 @@ class GristClient:
             balances[compte]['solde'] = balances[compte]['debit'] - balances[compte]['credit']
 
         return list(balances.values())
+
+    def create_kpi_table_if_not_exists(self, kpi_table_name: str = 'KPI') -> bool:
+        """
+        Crée la table des KPI si elle n'existe pas.
+
+        Args:
+            kpi_table_name: Nom de la table KPI
+
+        Returns:
+            True si la table a été créée ou existe déjà
+        """
+        # Vérifier si la table existe
+        tables_url = f"{self.server_url}/api/docs/{self.doc_id}/tables"
+        response = requests.get(tables_url, headers=self.headers)
+
+        if response.status_code == 200:
+            tables = response.json().get('tables', [])
+            if any(t['id'] == kpi_table_name for t in tables):
+                return True
+
+        # Créer la table KPI
+        columns = [
+            {'id': 'DateCalcul', 'fields': {'type': 'DateTime', 'label': 'Date de calcul'}},
+            {'id': 'PeriodeDebut', 'fields': {'type': 'Date', 'label': 'Période début'}},
+            {'id': 'PeriodeFin', 'fields': {'type': 'Date', 'label': 'Période fin'}},
+            {'id': 'ChiffreAffaires', 'fields': {'type': 'Numeric', 'label': 'Chiffre d\'affaires'}},
+            {'id': 'Charges', 'fields': {'type': 'Numeric', 'label': 'Charges'}},
+            {'id': 'ResultatNet', 'fields': {'type': 'Numeric', 'label': 'Résultat net'}},
+            {'id': 'MargeBrute', 'fields': {'type': 'Numeric', 'label': 'Marge brute'}},
+            {'id': 'Tresorerie', 'fields': {'type': 'Numeric', 'label': 'Trésorerie'}},
+            {'id': 'CreancesClients', 'fields': {'type': 'Numeric', 'label': 'Créances clients'}},
+            {'id': 'DettesFournisseurs', 'fields': {'type': 'Numeric', 'label': 'Dettes fournisseurs'}},
+            {'id': 'FondsRoulement', 'fields': {'type': 'Numeric', 'label': 'Fonds de roulement'}},
+            {'id': 'BFR', 'fields': {'type': 'Numeric', 'label': 'BFR'}},
+            {'id': 'TauxMargeBrute', 'fields': {'type': 'Numeric', 'label': 'Taux marge brute (%)'}},
+            {'id': 'TauxMargeNette', 'fields': {'type': 'Numeric', 'label': 'Taux marge nette (%)'}},
+            {'id': 'ROE', 'fields': {'type': 'Numeric', 'label': 'ROE (%)'}},
+            {'id': 'ROA', 'fields': {'type': 'Numeric', 'label': 'ROA (%)'}},
+            {'id': 'RatioLiquidite', 'fields': {'type': 'Numeric', 'label': 'Ratio liquidité'}},
+            {'id': 'AutonomieFinanciere', 'fields': {'type': 'Numeric', 'label': 'Autonomie financière (%)'}},
+            {'id': 'DelaiPaiementClients', 'fields': {'type': 'Numeric', 'label': 'Délai clients (jours)'}},
+            {'id': 'DelaiPaiementFournisseurs', 'fields': {'type': 'Numeric', 'label': 'Délai fournisseurs (jours)'}},
+        ]
+
+        create_url = f"{self.server_url}/api/docs/{self.doc_id}/tables"
+        payload = {
+            'tables': [{
+                'id': kpi_table_name,
+                'columns': columns
+            }]
+        }
+
+        response = requests.post(create_url, json=payload, headers=self.headers)
+        return response.status_code in [200, 201]
+
+    def upload_kpi(self, kpi_data: Dict[str, Any], kpi_table_name: str = 'KPI') -> Dict[str, Any]:
+        """
+        Upload les KPI vers une table Grist.
+
+        Args:
+            kpi_data: Données KPI à uploader
+            kpi_table_name: Nom de la table KPI
+
+        Returns:
+            Résultat de l'upload
+        """
+        # Créer la table si nécessaire
+        self.create_kpi_table_if_not_exists(kpi_table_name)
+
+        # Préparer les données KPI pour Grist
+        kpi_record = {
+            'DateCalcul': kpi_data.get('date_calcul', ''),
+            'PeriodeDebut': kpi_data.get('periode', {}).get('debut', ''),
+            'PeriodeFin': kpi_data.get('periode', {}).get('fin', ''),
+            'ChiffreAffaires': kpi_data.get('financiers', {}).get('chiffre_affaires', 0),
+            'Charges': kpi_data.get('financiers', {}).get('charges', 0),
+            'ResultatNet': kpi_data.get('financiers', {}).get('resultat_net', 0),
+            'MargeBrute': kpi_data.get('financiers', {}).get('marge_brute', 0),
+            'Tresorerie': kpi_data.get('financiers', {}).get('tresorerie', 0),
+            'CreancesClients': kpi_data.get('financiers', {}).get('creances_clients', 0),
+            'DettesFournisseurs': kpi_data.get('financiers', {}).get('dettes_fournisseurs', 0),
+            'FondsRoulement': kpi_data.get('financiers', {}).get('fonds_roulement', 0),
+            'BFR': kpi_data.get('financiers', {}).get('bfr', 0),
+            'TauxMargeBrute': kpi_data.get('ratios', {}).get('marge_brute_pct', 0),
+            'TauxMargeNette': kpi_data.get('ratios', {}).get('marge_nette_pct', 0),
+        }
+
+        # Ajouter les KPI financiers détaillés si disponibles
+        if 'kpi_financiers' in kpi_data:
+            fin_kpi = kpi_data['kpi_financiers']
+            kpi_record['ROE'] = fin_kpi.get('rentabilite', {}).get('roe_pct', 0)
+            kpi_record['ROA'] = fin_kpi.get('rentabilite', {}).get('roa_pct', 0)
+            kpi_record['RatioLiquidite'] = fin_kpi.get('liquidite', {}).get('ratio_general', 0)
+            kpi_record['AutonomieFinanciere'] = fin_kpi.get('solvabilite', {}).get('autonomie_financiere_pct', 0)
+            kpi_record['DelaiPaiementClients'] = fin_kpi.get('delais', {}).get('delai_paiement_clients_jours', 0)
+            kpi_record['DelaiPaiementFournisseurs'] = fin_kpi.get('delais', {}).get('delai_paiement_fournisseurs_jours', 0)
+
+        # Upload vers Grist
+        url = f"{self.server_url}/api/docs/{self.doc_id}/tables/{kpi_table_name}/records"
+        payload = {'records': [{'fields': kpi_record}]}
+
+        response = requests.post(url, json=payload, headers=self.headers)
+        response.raise_for_status()
+
+        return response.json()
+
+    def get_kpi_history(self, kpi_table_name: str = 'KPI', limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Récupère l'historique des KPI.
+
+        Args:
+            kpi_table_name: Nom de la table KPI
+            limit: Nombre maximum d'enregistrements
+
+        Returns:
+            Liste des KPI historiques
+        """
+        url = f"{self.server_url}/api/docs/{self.doc_id}/tables/{kpi_table_name}/records"
+        params = {}
+
+        if limit:
+            params['limit'] = limit
+
+        response = requests.get(url, headers=self.headers, params=params)
+        response.raise_for_status()
+
+        return response.json().get('records', [])

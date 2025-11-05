@@ -36,7 +36,46 @@ python upload_to_grist.py sample_fec.txt
 
 **Prérequis**: Configurer le fichier `.env` avec vos credentials Grist.
 
+### 4. generate_kpi_report.py
+
+Génère un rapport KPI complet à partir d'un fichier FEC avec analyse financière et opérationnelle.
+
+```bash
+python generate_kpi_report.py sample_fec.txt
+```
+
+Options:
+- Format texte (par défaut) : Rapport lisible avec interprétations
+- Format JSON : `python generate_kpi_report.py sample_fec.txt --format json`
+
+Le rapport inclut:
+- KPI financiers (CA, charges, résultat, trésorerie, BFR, etc.)
+- Ratios financiers (liquidité, solvabilité, rentabilité)
+- Délais de paiement et rotation
+- KPI opérationnels (qualité des données, productivité)
+- Top clients
+- Évolution mensuelle
+- Balance âgée clients
+
+### 5. upload_kpi_to_grist.py
+
+Calcule les KPI et les upload dans une table Grist dédiée pour suivi historique.
+
+```bash
+python upload_kpi_to_grist.py sample_fec.txt
+```
+
+Crée automatiquement une table "KPI" dans Grist avec:
+- Date de calcul
+- Période analysée
+- Tous les KPI financiers et ratios principaux
+- Historique pour suivre l'évolution dans le temps
+
+**Prérequis**: Configurer le fichier `.env` avec vos credentials Grist.
+
 ## Flux de travail recommandé
+
+### Workflow de base
 
 1. **Générer un fichier d'exemple** (ou utiliser votre propre fichier FEC):
    ```bash
@@ -52,6 +91,47 @@ python upload_to_grist.py sample_fec.txt
    ```bash
    python upload_to_grist.py test.txt
    ```
+
+### Workflow avec analyse KPI
+
+1. **Générer un fichier d'exemple**:
+   ```bash
+   python generate_sample_fec.py test.txt
+   ```
+
+2. **Générer le rapport KPI complet**:
+   ```bash
+   python generate_kpi_report.py test.txt
+   ```
+   Cela crée un fichier `kpi_report_YYYYMMDD_HHMMSS.txt` avec l'analyse complète.
+
+3. **Uploader les écritures ET les KPI vers Grist**:
+   ```bash
+   # Upload des écritures
+   python upload_to_grist.py test.txt
+
+   # Upload des KPI dans une table séparée
+   python upload_kpi_to_grist.py test.txt
+   ```
+
+4. **Consulter dans Grist**: Vos données sont maintenant dans Grist avec:
+   - Table "EcrituresComptables" : Toutes vos écritures
+   - Table "KPI" : Historique des KPI pour analyse d'évolution
+
+### Analyse périodique
+
+Pour un suivi régulier (mensuel, trimestriel):
+
+```bash
+# À chaque période, uploader les nouvelles données et KPI
+python upload_to_grist.py FEC_Q1_2024.txt
+python upload_kpi_to_grist.py FEC_Q1_2024.txt
+
+python upload_to_grist.py FEC_Q2_2024.txt
+python upload_kpi_to_grist.py FEC_Q2_2024.txt
+```
+
+Grist conservera l'historique des KPI pour suivre l'évolution dans le temps.
 
 ## Configuration pour l'upload vers Grist
 
