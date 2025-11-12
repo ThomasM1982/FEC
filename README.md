@@ -4,13 +4,24 @@ Ce projet permet d'exploiter des fichiers d'écritures comptables (FEC - Fichier
 
 ## Fonctionnalités
 
+### Gestion des écritures comptables
 - Lecture de fichiers FEC (CSV, Excel, TXT)
 - Validation des écritures comptables
 - Intégration avec l'API Grist
 - Export et import des données
+
+### Analyse financière
 - **Calcul automatique de KPI financiers et opérationnels**
 - **Génération de rapports d'analyse**
 - **Suivi historique des KPI dans Grist**
+
+### **Consolidation multi-entités** (Nouveau !)
+- **Gestion de 10 à 20 SCCV** sous une société mère
+- **Identification automatique des flux inter-compagnies**
+- **Gestion des exercices comptables décalés**
+- **Rapprochement automatique des opérations réciproques**
+- **KPI consolidés au niveau groupe**
+- **Classement des entités par performance**
 
 ## Structure du projet
 
@@ -21,9 +32,11 @@ Ce projet permet d'exploiter des fichiers d'écritures comptables (FEC - Fichier
 │   ├── grist/           # Client API Grist
 │   ├── readers/         # Lecteurs de fichiers
 │   ├── validators/      # Validateurs d'écritures
-│   └── kpi/            # Calculateurs de KPI
+│   ├── kpi/            # Calculateurs de KPI
+│   └── consolidation/  # Consolidation multi-entités
 ├── examples/            # Scripts d'exemple
 ├── tests/              # Tests unitaires
+├── CONSOLIDATION_GUIDE.md  # Guide détaillé consolidation
 └── requirements.txt    # Dépendances
 ```
 
@@ -94,6 +107,9 @@ python examples/generate_kpi_report.py fichier.txt
 # Uploader vers Grist avec KPI
 python examples/upload_to_grist.py fichier.txt
 python examples/upload_kpi_to_grist.py fichier.txt
+
+# Consolidation multi-entités (SCCV)
+python examples/consolidation_groupe.py entities_config.json data/fec_sccv/
 ```
 
 ## KPI Disponibles
@@ -145,6 +161,36 @@ python examples/upload_kpi_to_grist.py fichier.txt
 - **Balance âgée clients** : Ancienneté des créances
 - **Évolution mensuelle** : CA, charges et résultat par mois
 - **Répartition par journal** : Statistiques par journal comptable
+
+## Consolidation Multi-Entités
+
+Le système permet d'analyser et consolider les données de plusieurs sociétés (SCCV, filiales) avec :
+
+### Fonctionnalités
+- **Gestion des entités** : Référentiel centralisé des sociétés du groupe
+- **Exercices décalés** : Calcul automatique de la période commune
+- **Flux inter-compagnies** : Identification et rapprochement automatiques
+- **Consolidation** : KPI groupe avec élimination des opérations internes
+- **Classement** : Performance comparative des entités
+
+### Exemple d'utilisation
+
+```bash
+# 1. Créer le fichier de configuration des entités (voir examples/entities_config_example.json)
+# 2. Organiser les FEC par entité : PROMO_2024.txt, SCCV001_2024.txt, etc.
+# 3. Lancer la consolidation
+python examples/consolidation_groupe.py entities_config.json data/fec_sccv/
+```
+
+Le système va :
+- Charger automatiquement tous les FEC
+- Identifier les exercices décalés
+- Détecter les flux inter-compagnies (comptes 451xxx)
+- Calculer les KPI consolidés
+- Générer un rapport complet
+- Uploader vers Grist (optionnel)
+
+**📖 Guide complet** : Voir [CONSOLIDATION_GUIDE.md](CONSOLIDATION_GUIDE.md)
 
 ## Format FEC
 

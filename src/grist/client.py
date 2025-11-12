@@ -376,3 +376,252 @@ class GristClient:
         response.raise_for_status()
 
         return response.json().get('records', [])
+
+    def create_entities_table_if_not_exists(self, table_name: str = 'Entites') -> bool:
+        """
+        Crée la table des entités si elle n'existe pas.
+
+        Args:
+            table_name: Nom de la table
+
+        Returns:
+            True si la table a été créée ou existe déjà
+        """
+        # Vérifier si la table existe
+        tables_url = f"{self.server_url}/api/docs/{self.doc_id}/tables"
+        response = requests.get(tables_url, headers=self.headers)
+
+        if response.status_code == 200:
+            tables = response.json().get('tables', [])
+            if any(t['id'] == table_name for t in tables):
+                return True
+
+        # Créer la table
+        columns = [
+            {'id': 'Code', 'fields': {'type': 'Text', 'label': 'Code'}},
+            {'id': 'Nom', 'fields': {'type': 'Text', 'label': 'Nom'}},
+            {'id': 'Type', 'fields': {'type': 'Text', 'label': 'Type'}},
+            {'id': 'SIREN', 'fields': {'type': 'Text', 'label': 'SIREN'}},
+            {'id': 'ExerciceDebut', 'fields': {'type': 'Date', 'label': 'Début exercice'}},
+            {'id': 'ExerciceFin', 'fields': {'type': 'Date', 'label': 'Fin exercice'}},
+            {'id': 'ParentCode', 'fields': {'type': 'Text', 'label': 'Code société mère'}},
+            {'id': 'DetentionPct', 'fields': {'type': 'Numeric', 'label': '% Détention'}},
+            {'id': 'CompteICPrefix', 'fields': {'type': 'Text', 'label': 'Préfixe compte IC'}},
+            {'id': 'Active', 'fields': {'type': 'Bool', 'label': 'Active'}},
+        ]
+
+        create_url = f"{self.server_url}/api/docs/{self.doc_id}/tables"
+        payload = {
+            'tables': [{
+                'id': table_name,
+                'columns': columns
+            }]
+        }
+
+        response = requests.post(create_url, json=payload, headers=self.headers)
+        return response.status_code in [200, 201]
+
+    def upload_entities(self, entities_data: List[Dict[str, Any]],
+                       table_name: str = 'Entites') -> Dict[str, Any]:
+        """
+        Upload les entités vers Grist.
+
+        Args:
+            entities_data: Liste des entités
+            table_name: Nom de la table
+
+        Returns:
+            Résultat de l'upload
+        """
+        self.create_entities_table_if_not_exists(table_name)
+
+        records = []
+        for entity in entities_data:
+            records.append({
+                'Code': entity.get('code', ''),
+                'Nom': entity.get('name', ''),
+                'Type': entity.get('type', ''),
+                'SIREN': entity.get('siren', ''),
+                'ExerciceDebut': entity.get('exercice_start', ''),
+                'ExerciceFin': entity.get('exercice_end', ''),
+                'ParentCode': entity.get('parent_code', ''),
+                'DetentionPct': entity.get('ownership_pct', 100),
+                'CompteICPrefix': entity.get('intercompany_prefix', '451'),
+                'Active': entity.get('active', True)
+            })
+
+        url = f"{self.server_url}/api/docs/{self.doc_id}/tables/{table_name}/records"
+        payload = {'records': [{'fields': record} for record in records]}
+
+        response = requests.post(url, json=payload, headers=self.headers)
+        response.raise_for_status()
+
+        return response.json()
+
+    def create_consolidation_table_if_not_exists(self, table_name: str = 'Consolidation') -> bool:
+        """
+        Crée la table de consolidation si elle n'existe pas.
+
+        Args:
+            table_name: Nom de la table
+
+        Returns:
+            True si la table a été créée ou existe déjà
+        """
+        # Vérifier si la table existe
+        tables_url = f"{self.server_url}/api/docs/{self.doc_id}/tables"
+        response = requests.get(tables_url, headers=self.headers)
+
+        if response.status_code == 200:
+            tables = response.json().get('tables', [])
+            if any(t['id'] == table_name for t in tables):
+                return True
+
+        # Créer la table
+        columns = [
+            {'id': 'DateCalcul', 'fields': {'type': 'DateTime', 'label': 'Date calcul'}},
+            {'id': 'PeriodeDebut', 'fields': {'type': 'Date', 'label': 'Période début'}},
+            {'id': 'PeriodeFin', 'fields': {'type': 'Date', 'label': 'Période fin'}},
+            {'id': 'NombreEntites', 'fields': {'type': 'Int', 'label': 'Nombre entités'}},
+            {'id': 'CAConsolide', 'fields': {'type': 'Numeric', 'label': 'CA consolidé'}},
+            {'id': 'ChargesConsolidees', 'fields': {'type': 'Numeric', 'label': 'Charges consolidées'}},
+            {'id': 'ResultatConsolide', 'fields': {'type': 'Numeric', 'label': 'Résultat consolidé'}},
+            {'id': 'MargeConsolidee', 'fields': {'type': 'Numeric', 'label': 'Marge consolidée (%)'}},
+            {'id': 'TresorerieGroupe', 'fields': {'type': 'Numeric', 'label': 'Trésorerie groupe'}},
+            {'id': 'FluxIC', 'fields': {'type': 'Int', 'label': 'Flux inter-compagnies'}},
+            {'id': 'FluxICRappro', 'fields': {'type': 'Int', 'label': 'Flux IC rapprochés'}},
+            {'id': 'TauxRappro', 'fields': {'type': 'Numeric', 'label': 'Taux rapprochement (%)'}},
+            {'id': 'SoldesIC', 'fields': {'type': 'Numeric', 'label': 'Soldes IC nets'}},
+        ]
+
+        create_url = f"{self.server_url}/api/docs/{self.doc_id}/tables"
+        payload = {
+            'tables': [{
+                'id': table_name,
+                'columns': columns
+            }]
+        }
+
+        response = requests.post(create_url, json=payload, headers=self.headers)
+        return response.status_code in [200, 201]
+
+    def upload_consolidation(self, consolidation_data: Dict[str, Any],
+                            table_name: str = 'Consolidation') -> Dict[str, Any]:
+        """
+        Upload les données de consolidation vers Grist.
+
+        Args:
+            consolidation_data: Données de consolidation
+            table_name: Nom de la table
+
+        Returns:
+            Résultat de l'upload
+        """
+        from datetime import datetime
+
+        self.create_consolidation_table_if_not_exists(table_name)
+
+        cons = consolidation_data.get('consolidated', {})
+        ic = consolidation_data.get('intercompany', {})
+        period = consolidation_data.get('period', {})
+
+        record = {
+            'DateCalcul': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'PeriodeDebut': period.get('start', ''),
+            'PeriodeFin': period.get('end', ''),
+            'NombreEntites': len(consolidation_data.get('by_entity', {})),
+            'CAConsolide': cons.get('ca', 0),
+            'ChargesConsolidees': cons.get('charges', 0),
+            'ResultatConsolide': cons.get('resultat', 0),
+            'MargeConsolidee': cons.get('marge_pct', 0),
+            'TresorerieGroupe': cons.get('tresorerie', 0),
+            'FluxIC': ic.get('total_flows', 0),
+            'FluxICRappro': ic.get('reconciled', 0),
+            'TauxRappro': ic.get('reconciliation_rate', 0),
+            'SoldesIC': ic.get('total_ic_balances', 0),
+        }
+
+        url = f"{self.server_url}/api/docs/{self.doc_id}/tables/{table_name}/records"
+        payload = {'records': [{'fields': record}]}
+
+        response = requests.post(url, json=payload, headers=self.headers)
+        response.raise_for_status()
+
+        return response.json()
+
+    def create_intercompany_table_if_not_exists(self, table_name: str = 'FluxInterCompagnies') -> bool:
+        """
+        Crée la table des flux inter-compagnies si elle n'existe pas.
+
+        Args:
+            table_name: Nom de la table
+
+        Returns:
+            True si la table a été créée ou existe déjà
+        """
+        # Vérifier si la table existe
+        tables_url = f"{self.server_url}/api/docs/{self.doc_id}/tables"
+        response = requests.get(tables_url, headers=self.headers)
+
+        if response.status_code == 200:
+            tables = response.json().get('tables', [])
+            if any(t['id'] == table_name for t in tables):
+                return True
+
+        # Créer la table
+        columns = [
+            {'id': 'Entite1', 'fields': {'type': 'Text', 'label': 'Entité 1'}},
+            {'id': 'Entite2', 'fields': {'type': 'Text', 'label': 'Entité 2'}},
+            {'id': 'SoldeE1versE2', 'fields': {'type': 'Numeric', 'label': 'Solde E1→E2'}},
+            {'id': 'SoldeE2versE1', 'fields': {'type': 'Numeric', 'label': 'Solde E2→E1'}},
+            {'id': 'SoldeNet', 'fields': {'type': 'Numeric', 'label': 'Solde net'}},
+            {'id': 'QuiDoit', 'fields': {'type': 'Text', 'label': 'Qui doit'}},
+            {'id': 'DateCalcul', 'fields': {'type': 'DateTime', 'label': 'Date calcul'}},
+        ]
+
+        create_url = f"{self.server_url}/api/docs/{self.doc_id}/tables"
+        payload = {
+            'tables': [{
+                'id': table_name,
+                'columns': columns
+            }]
+        }
+
+        response = requests.post(create_url, json=payload, headers=self.headers)
+        return response.status_code in [200, 201]
+
+    def upload_intercompany_balances(self, balances: List[Dict[str, Any]],
+                                    table_name: str = 'FluxInterCompagnies') -> Dict[str, Any]:
+        """
+        Upload les soldes inter-compagnies vers Grist.
+
+        Args:
+            balances: Liste des soldes inter-compagnies
+            table_name: Nom de la table
+
+        Returns:
+            Résultat de l'upload
+        """
+        from datetime import datetime
+
+        self.create_intercompany_table_if_not_exists(table_name)
+
+        records = []
+        for bal in balances:
+            records.append({
+                'Entite1': bal['entity1'],
+                'Entite2': bal['entity2'],
+                'SoldeE1versE2': bal['balance_e1_to_e2'],
+                'SoldeE2versE1': bal['balance_e2_to_e1'],
+                'SoldeNet': bal['net_balance'],
+                'QuiDoit': bal['who_owes'],
+                'DateCalcul': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+
+        url = f"{self.server_url}/api/docs/{self.doc_id}/tables/{table_name}/records"
+        payload = {'records': [{'fields': record} for record in records]}
+
+        response = requests.post(url, json=payload, headers=self.headers)
+        response.raise_for_status()
+
+        return response.json()

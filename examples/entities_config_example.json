@@ -1,0 +1,74 @@
+{
+  "entities": [
+    {
+      "code": "PROMO",
+      "name": "Société de Promotion Immobilière",
+      "type": "MERE",
+      "siren": "123456789",
+      "exercice_start": "2024-01-01",
+      "exercice_end": "2024-12-31",
+      "intercompany_prefix": "451",
+      "active": true
+    },
+    {
+      "code": "SCCV001",
+      "name": "SCCV Résidence Les Jardins",
+      "type": "SCCV",
+      "siren": "234567890",
+      "exercice_start": "2024-01-01",
+      "exercice_end": "2024-12-31",
+      "parent_code": "PROMO",
+      "ownership_pct": 100.0,
+      "intercompany_prefix": "451001",
+      "active": true
+    },
+    {
+      "code": "SCCV002",
+      "name": "SCCV Parc des Lilas",
+      "type": "SCCV",
+      "siren": "345678901",
+      "exercice_start": "2024-03-01",
+      "exercice_end": "2025-02-28",
+      "parent_code": "PROMO",
+      "ownership_pct": 100.0,
+      "intercompany_prefix": "451002",
+      "active": true
+    },
+    {
+      "code": "SCCV003",
+      "name": "SCCV Villa Moderne",
+      "type": "SCCV",
+      "siren": "456789012",
+      "exercice_start": "2024-01-01",
+      "exercice_end": "2024-12-31",
+      "parent_code": "PROMO",
+      "ownership_pct": 100.0,
+      "intercompany_prefix": "451003",
+      "active": true
+    },
+    {
+      "code": "SCCV004",
+      "name": "SCCV Immeuble Central",
+      "type": "SCCV",
+      "siren": "567890123",
+      "exercice_start": "2023-07-01",
+      "exercice_end": "2024-06-30",
+      "parent_code": "PROMO",
+      "ownership_pct": 100.0,
+      "intercompany_prefix": "451004",
+      "active": true
+    },
+    {
+      "code": "SCCV005",
+      "name": "SCCV Complexe du Parc",
+      "type": "SCCV",
+      "siren": "678901234",
+      "exercice_start": "2024-01-01",
+      "exercice_end": "2024-12-31",
+      "parent_code": "PROMO",
+      "ownership_pct": 100.0,
+      "intercompany_prefix": "451005",
+      "active": true
+    }
+  ]
+}
